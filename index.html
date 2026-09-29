@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JUJUTSU POTATO | JJS Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0; padding: 0;
+            font-family: 'Impact', 'Segoe UI', Tahoma, sans-serif;
+        }
+        body, html {
+            width: 100%; height: 100%;
+            background-color: #05000a; color: white;
+            overflow: hidden; touch-action: none;
+        }
+
+        #game-stage {
+            position: relative; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at center, #1a0033 0%, #030008 100%);
+            overflow: hidden;
+        }
+
+        .shake { animation: shakeAnim 0.15s ease-in-out; }
+        @keyframes shakeAnim {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-7px, 4px); }
+            50% { transform: translate(7px, -4px); }
+            75% { transform: translate(-4px, -4px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        #ground {
+            position: absolute; bottom: 0; width: 100%; height: 18%;
+            background: linear-gradient(180deg, #120024 0%, #080010 100%);
+            border-top: 3px solid #ff0055;
+            box-shadow: 0 -10px 25px rgba(255, 0, 85, 0.4);
+            z-index: 2;
+        }
+
+        /* الـ Stickman بأسلوب JJS */
+        .stickman {
+            position: absolute; bottom: 18%; width: 40px; height: 80px;
+            z-index: 10; transition: transform 0.05s linear;
+        }
+        .s-head {
+            position: absolute; top: 0; left: 10px; width: 20px; height: 20px;
+            border: 3px solid #fff; border-radius: 50%; background: #000;
+        }
+        .s-body {
+            position: absolute; top: 20px; left: 18px; width: 4px; height: 30px;
+            background: #fff; border-radius: 2px; transform-origin: bottom center;
+        }
+        .s-arm {
+            position: absolute; top: 22px; left: 18px; width: 4px; height: 22px;
+            background: #fff; transform-origin: top center; border-radius: 2px;
+            transition: transform 0.08s ease;
+        }
+        .s-arm.left { transform: rotate(15deg); }
+        .s-arm.right { transform: rotate(-15deg); }
+        .s-leg {
+            position: absolute; top: 48px; left: 18px; width: 4px; height: 26px;
+            background: #fff; transform-origin: top center; border-radius: 2px;
+            transition: transform 0.08s ease;
+        }
+        .s-leg.left { transform: rotate(10deg); }
+        .s-leg.right { transform: rotate(-10deg); }
+
+        /* انيميشن مشية JJS */
+        .walking .s-leg.left { animation: walkLegL 0.28s infinite alternate ease-in-out; }
+        .walking .s-leg.right { animation: walkLegR 0.28s infinite alternate ease-in-out; }
+        .walking .s-arm.left { animation: walkArmL 0.28s infinite alternate ease-in-out; }
+        .walking .s-arm.right { animation: walkArmR 0.28s infinite alternate ease-in-out; }
+        .walking .s-body { transform: rotate(5deg); }
+
+        @keyframes walkLegL { 0% { transform: rotate(35deg); } 100% { transform: rotate(-35deg); } }
+        @keyframes walkLegR { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+        @keyframes walkArmL { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
+        @keyframes walkArmR { 0% { transform: rotate(25deg); } 100% { transform: rotate(-25deg); } }
+
+        /* هالة البطل */
+        #player.char-yuji .s-head, #player.char-yuji .s-body, #player.char-yuji .s-arm, #player.char-yuji .s-leg {
+            border-color: #ff0055; background-color: #ff0055;
+            box-shadow: 0 0 10px #ff0055;
+        }
+
+        .anim-attack .s-arm.right {
+            transform: rotate(-120deg) scaleX(2.8) !important;
+            background: #ff0055 !important; box-shadow: 0 0 18px #ff0055;
+        }
+        .anim-attack .s-body { transform: rotate(-15deg); }
+
+        /* اللعنة العادية */
+        .curse-stick { position: absolute; bottom: 18%; width: 40px; height: 75px; z-index: 8; }
+        .curse-stick .s-head, .curse-stick .s-body, .curse-stick .s-arm, .curse-stick .s-leg {
+            border-color: #a855f7; background-color: #a855f7; box-shadow: 0 0 8px #a855f7;
+        }
+
+        /* شخصية "ماهيتو" */
+        .mahito-stick { position: absolute; bottom: 18%; width: 45px; height: 82px; z-index: 9; }
+        .mahito-stick .s-head, .mahito-stick .s-body, .mahito-stick .s-arm, .mahito-stick .s-leg {
+            border-color: #00f0ff; background-color: #00f0ff; box-shadow: 0 0 12px #00f0ff;
+        }
+
+        #combo-container {
+            position: absolute; top: 20%; right: 5%; z-index: 100;
+            text-align: right; pointer-events: none; opacity: 0;
+            transition: opacity 0.2s ease, transform 0.1s ease;
+        }
+        #combo-count { font-size: 48px; color: #ffcc00; text-shadow: 0 0 15px #ffcc00; }
+        #combo-title { font-size: 16px; color: #fff; letter-spacing: 2px; }
+
+        #hud {
+            position: absolute; top: 15px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 16px; color: #fff; z-index: 100; pointer-events: none;
+            text-shadow: 0 0 8px #000;
+        }
+        .bar-outer { width: 90px; height: 14px; background: rgba(255,255,255,0.1); border: 2px solid #fff; border-radius: 7px; overflow: hidden; display: inline-block; vertical-align: middle; }
+        #hp-bar { width: 100%; height: 100%; background: #ff0055; transition: width 0.1s ease; }
+        #ult-bar { width: 0%; height: 100%; background: #ffcc00; transition: width 0.1s ease; }
+
+        /* اختيار اللغة */
+        #lang-selector {
+            position: absolute; top: 15px; right: 15px; z-index: 3000;
+            background: rgba(0, 0, 0, 0.85); color: #fff; border: 2px solid #ff0055;
+            padding: 8px 14px; border-radius: 8px; font-size: 14px; cursor: pointer;
+            outline: none; font-weight: bold;
+        }
+
+        #mobile-joystick {
+            position: absolute; bottom: 25px; left: 25px; width: 110px; height: 110px;
+            background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 0, 85, 0.4);
+            border-radius: 50%; z-index: 500; touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute; top: 35px; left: 35px; width: 40px; height: 40px;
+            background: #ff0055; border-radius: 50%; pointer-events: none; box-shadow: 0 0 12px #ff0055;
+        }
+
+        .action-btns {
+            position: absolute; bottom: 25px; right: 25px;
+            display: flex; gap: 12px; z-index: 500;
+        }
+        .btn-act {
+            width: 62px; height: 62px; background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; color: white;
+            font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(8px); cursor: pointer;
+        }
+        .btn-act:active { transform: scale(0.88); background: #ff0055; }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(4, 0, 10, 0.94); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 2000;
+        }
+        .start-btn {
+            background: linear-gradient(45deg, #ff0055, #ff3300); color: white;
+            border: none; padding: 15px 40px; font-size: 20px; border-radius: 30px;
+            margin-top: 20px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+            transition: transform 0.1s ease;
+        }
+        .start-btn:active { transform: scale(0.92); }
+    </style>
+</head>
+<body>
+
+    <select id="lang-selector">
+        <option value="ar">العربية (Arabic)</option>
+        <option value="en">English</option>
+        <option value="ja">日本語 (Japanese)</option>
+        <option value="es">Español (Spanish)</option>
+        <option value="fr">Français (French)</option>
+        <option value="de">Deutsch (German)</option>
+        <option value="pt">Português (Portuguese)</option>
+        <option value="ru">Русский (Russian)</option>
+        <option value="zh">中文 (Chinese)</option>
+        <option value="ko">한국어 (Korean)</option>
+    </select>
+
+    <div id="game-stage">
+        <div id="lobby" class="overlay">
+            <h1 style="color: #ff0055; font-size: 42px; text-shadow: 0 0 20px #ff0055;">JUJUTSU POTATO</h1>
+            <p id="txt-subtitle" style="color: #888; font-size: 14px; margin-top: 5px;">STICKMAN JJS FIGHTING EVOLUTION</p>
+            <p id="txt-support" style="color: #ffcc00; font-size: 12px; margin-top: 15px;">🎮 يدعم الجوال، الكيبورد، ويد السوني</p>
+            <button class="start-btn" id="btn-start">ابدأ القتال ⚔️</button>
+        </div>
+
+        <div id="game-over" class="overlay" style="display: none;">
+            <h2 id="txt-gameover" style="color: #ff0055; font-size: 36px; text-shadow: 0 0 15px #ff0055;">K.O. - انتهت المعركة</h2>
+            <p style="margin-top: 15px; font-size: 22px;"><span id="txt-score-label">السكور النهائي</span>: <span id="final-score" style="color: #ffcc00;">0</span></p>
+            <button class="start-btn" id="btn-restart">إعادة المحاولة 🔄</button>
+        </div>
+
+        <div id="combo-container">
+            <div id="combo-count">0x</div>
+            <div id="combo-title">COMBO HIT!</div>
+        </div>
+
+        <div id="hud">
+            <div><span id="lbl-score">SCORE</span>: <span id="score" style="color: #ffcc00;">0</span></div>
+            <div>HP: <div class="bar-outer"><div id="hp-bar"></div></div></div>
+            <div>ULT: <div class="bar-outer"><div id="ult-bar"></div></div></div>
+        </div>
+
+        <div id="player" class="stickman char-yuji">
+            <div class="s-head"></div>
+            <div class="s-body"></div>
+            <div class="s-arm left"></div>
+            <div class="s-arm right"></div>
+            <div class="s-leg left"></div>
+            <div class="s-leg right"></div>
+        </div>
+
+        <div id="ground"></div>
+
+        <div id="mobile-joystick">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <div class="action-btns">
+            <div class="btn-act" id="btn-m1">👊<br><span id="btn-m1-txt">M1</span></div>
+            <div class="btn-act" id="btn-skill">🛡️<br><span id="btn-skill-txt">Skill</span></div>
+            <div class="btn-act" id="btn-ult">⚡<br><span id="btn-ult-txt">ULT</span></div>
+            <div class="btn-act" id="btn-jump">⬆️<br><span id="btn-jump-txt">Jump</span></div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ar: { dir: 'rtl', subtitle: "قتال ستيك مان بأسلوب JJS", support: "🎮 يدعم الجوال، الكيبورد، ويد السوني", start: "ابدأ القتال ⚔️", gameover: "K.O. - انتهت المعركة", finalScore: "السكور النهائي", restart: "إعادة المحاولة 🔄", comboTitle: "ضربات متتالية!", score: "النقاط", skill: "مهارة", jump: "قفز" },
+            en: { dir: 'ltr', subtitle: "STICKMAN JJS FIGHTING EVOLUTION", support: "🎮 Supports Mobile, Keyboard, & Gamepad", start: "START BATTLE ⚔️", gameover: "K.O. - GAME OVER", finalScore: "Final Score", restart: "RETRY 🔄", comboTitle: "COMBO HIT!", score: "SCORE", skill: "SKILL", jump: "JUMP" },
+            ja: { dir: 'ltr', subtitle: "JJSスタイル棒人間格闘", support: "🎮 スマホ・キーボード・コントローラー対応", start: "バトル開始 ⚔️", gameover: "K.O. - ゲームオーバー", finalScore: "最終スコア", restart: "もう一度 🔄", comboTitle: "コンボヒット！", score: "スコア", skill: "スキル", jump: "ジャンプ" },
+            es: { dir: 'ltr', subtitle: "EVOLUCIÓN ESTILO JJS", support: "🎮 Compatible con Móvil, Teclado y Mando", start: "INICIAR BATALLA ⚔️", gameover: "K.O. - FIN DEL JUEGO", finalScore: "Puntuación Final", restart: "REINTENTAR 🔄", comboTitle: "¡GOLPE COMBO!", score: "PUNTOS", skill: "HABILIDAD", jump: "SALTO" },
+            fr: { dir: 'ltr', subtitle: "ÉVOLUTION COMBAT JJS", support: "🎮 Supporte Mobile, Clavier & Manette", start: "COMMENCER ⚔️", gameover: "K.O. - GAME OVER", finalScore: "Score Final", restart: "RECOMMENCER 🔄", comboTitle: "COMBO HIT!", score: "SCORE", skill: "COMPÉTENCE", jump: "SAUTER" },
+            de: { dir: 'ltr', subtitle: "JJS KAMPF EVOLUTION", support: "🎮 Unterstützt Mobil, Tastatur & Gamepad", start: "KAMPF STARTEN ⚔️", gameover: "K.O. - GAME OVER", finalScore: "Endpunktzahl", restart: "NEUSTART 🔄", comboTitle: "KOMBO-TREFFER!", score: "PUNKTE", skill: "SKILL", jump: "SPRINGEN" },
+            pt: { dir: 'ltr', subtitle: "EVOLUÇÃO ESTILO JJS", support: "🎮 Suporta Celular, Teclado e Controle", start: "INICIAR BATALHA ⚔️", gameover: "K.O. - FIM DE JOGO", finalScore: "Pontuação Final", restart: "TENTAR NOVAMENTE 🔄", comboTitle: "GOLPE COMBO!", score: "PONTOS", skill: "HABILIDADE", jump: "PULAR" },
+            ru: { dir: 'ltr', subtitle: "JJS ЭВОЛЮЦИЯ БОЕВ", support: "🎮 Поддержка телефонов, клавиатуры и геймпада", start: "НАЧАТЬ БОЙ ⚔️", gameover: "K.O. - ИГРА ОКОНЧЕНА", finalScore: "Финальный счет", restart: "ПОВТОРИТЬ 🔄", comboTitle: "КОМБО УДАР!", score: "СЧЕТ", skill: "НАВЫК", jump: "ПРЫЖОК" },
+            zh: { dir: 'ltr', subtitle: "JJS风格火柴人进化", support: "🎮 支持手机、键盘和手柄", start: "开始战斗 ⚔️", gameover: "K.O. - 游戏结束", finalScore: "最终得分", restart: "重新开始 🔄", comboTitle: "连击！", score: "得分", skill: "技能", jump: "跳跃" },
+            ko: { dir: 'ltr', subtitle: "JJS 스타일 스틱맨 파이팅", support: "🎮 모바일, 키보드, 게임패드 지원", start: "전투 시작 ⚔️", gameover: "K.O. - 게임 오버", finalScore: "최종 점수", restart: "다시 시도 🔄", comboTitle: "콤보 히트!", score: "점수", skill: "스킬", jump: "점프" }
+        };
+
+        const langSelect = document.getElementById('lang-selector');
+
+        function changeLanguage(langKey) {
+            const lang = translations[langKey] || translations['ar'];
+            document.getElementById('html-root').setAttribute('dir', lang.dir);
+            document.getElementById('html-root').setAttribute('lang', langKey);
+            document.getElementById('txt-subtitle').innerText = lang.subtitle;
+            document.getElementById('txt-support').innerText = lang.support;
+            document.getElementById('btn-start').innerText = lang.start;
+            document.getElementById('txt-gameover').innerText = lang.gameover;
+            document.getElementById('txt-score-label').innerText = lang.finalScore;
+            document.getElementById('btn-restart').innerText = lang.restart;
+            document.getElementById('combo-title').innerText = lang.comboTitle;
+            document.getElementById('lbl-score').innerText = lang.score;
+            document.getElementById('btn-skill-txt').innerText = lang.skill;
+            document.getElementById('btn-jump-txt').innerText = lang.jump;
+        }
+
+        langSelect.addEventListener('change', (e) => {
+            changeLanguage(e.target.value);
+        });
+
+        let score = 0, hp = 100, ultEnergy = 0, comboHits = 0, comboTimer = null, isPlaying = false;
+        let playerX = window.innerWidth / 2, playerY = 0, isJumping = false, jumpVel = 0, moveSpeed = 0;
+        let curses = [];
+        const player = document.getElementById('player');
+        const stage = document.getElementById('game-stage');
+
+        const SPEED_FACTOR = 0.9;
+
+        // ربط أزرار البدء والإعادة بشكل حاسم لعدم حدوث أي خطأ
+        document.getElementById('btn-start').onclick = (e) => { 
+            e.preventDefault();
+            document.getElementById('lobby').style.display = 'none'; 
+            startGame(); 
+        };
+        
+        document.getElementById('btn-restart').onclick = (e) => { 
+            e.preventDefault();
+            document.getElementById('game-over').style.display = 'none'; 
+            startGame(); 
+        };
+
+        function startGame() {
+            curses.forEach(c => c.remove());
+            curses = [];
+            score = 0; hp = 100; ultEnergy = 0; comboHits = 0; isPlaying = true;
+            playerX = window.innerWidth / 2;
+            player.style.left = playerX + 'px';
+            updateHUD();
+            spawnCurse();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateHUD() {
+            document.getElementById('hp-bar').style.width = Math.max(0, hp) + '%';
+            document.getElementById('ult-bar').style.width = Math.min(100, ultEnergy) + '%';
+            document.getElementById('score').innerText = score;
+        }
+
+        function triggerCombo() {
+            comboHits++;
+            const container = document.getElementById('combo-container');
+            document.getElementById('combo-count').innerText = comboHits + 'x';
+            container.style.opacity = '1';
+            clearTimeout(comboTimer);
+            comboTimer = setTimeout(() => { container.style.opacity = '0'; comboHits = 0; }, 2000);
+        }
+
+        function attack() {
+            if (!isPlaying) return;
+            player.classList.add('anim-attack');
+            setTimeout(() => player.classList.remove('anim-attack'), 120);
+
+            let hit = false;
+            curses.forEach((c, index) => {
+                let cx = parseInt(c.style.left);
+                if (Math.abs(cx - playerX) < 85) {
+                    c.remove(); curses.splice(index, 1); hit = true;
+                    score += (c.classList.contains('mahito-stick') ? 35 : 10) + (comboHits * 2);
+                    ultEnergy = Math.min(100, ultEnergy + 15);
+                    triggerCombo(); updateHUD();
+                }
+            });
+            if (hit) { stage.classList.add('shake'); setTimeout(() => stage.classList.remove('shake'), 150); }
+        }
+
+        function triggerUlt() {
+            if (ultEnergy >= 100 && isPlaying) {
+                ultEnergy = 0; stage.classList.add('shake');
+                curses.forEach(c => c.remove()); curses = [];
+                score += 150; updateHUD();
+                setTimeout(() => stage.classList.remove('shake'), 300);
+            }
+        }
+
+        function jump() { if (!isJumping && isPlaying) { isJumping = true; jumpVel = 15 * SPEED_FACTOR; } }
+
+        function bindTouch(id, action) {
+            const el = document.getElementById(id);
+            const exec = (e) => { if(e) e.preventDefault(); action(); };
+            el.addEventListener('touchstart', exec, { passive: false });
+            el.addEventListener('mousedown', exec);
+        }
+
+        bindTouch('btn-m1', attack);
+        bindTouch('btn-skill', attack);
+        bindTouch('btn-ult', triggerUlt);
+        bindTouch('btn-jump', jump);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') moveSpeed = -6.3 * SPEED_FACTOR;
+            if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') moveSpeed = 6.3 * SPEED_FACTOR;
+            if (e.key === ' ' || e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') jump();
+            if (e.key.toLowerCase() === 'j' || e.key.toLowerCase() === 'k') attack();
+            if (e.key.toLowerCase() === 'l') triggerUlt();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(e.key.toLowerCase())) moveSpeed = 0;
+        });
+
+        const joy = document.getElementById('mobile-joystick');
+        const knob = document.getElementById('joystick-knob');
+        let joyActive = false, joyCenterX = 0;
+
+        joy.addEventListener('touchstart', (e) => {
+            e.preventDefault(); joyActive = true; joyCenterX = joy.getBoundingClientRect().left + 55;
+            moveJoy(e.touches[0].clientX);
+        }, { passive: false });
+
+        joy.addEventListener('touchmove', (e) => {
+            if (joyActive) { e.preventDefault(); moveJoy(e.touches[0].clientX); }
+        }, { passive: false });
+
+        const stopJoy = () => { joyActive = fal
